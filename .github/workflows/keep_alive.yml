@@ -13,7 +13,8 @@ jobs:
       - name: Visit Website
         run: |
           # 定义你的网站地址（可以放多个）
-          URLS=("http://upic.rf.gd" "https://5399navi.liveblog365.com" "https://e-netek.freehostcn.com")
+          URLS=("http://upic.rf.gd" "https://5399navi.liveblog365.com" "https://e-netek.freehostcn.com"
+          "http://titanplatinium.dnsup.net/index.asp")
           
           for url in "${URLS[@]}"; do
             echo "正在访问: $url"
