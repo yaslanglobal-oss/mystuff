@@ -1,25 +1,35 @@
-name: Website Keep Alive
+name: Global Website Keep Alive
 
 on:
   schedule:
-    # 每天 0点、6点、12点、18点 自动运行（每6小时一次，远超30天10次的要求）
+    # 每天北京时间 08:00, 14:00, 20:00, 02:00 自动运行
     - cron: '0 0,6,12,18 * * *'
   workflow_dispatch: # 支持手动点击运行测试
 
 jobs:
-  ping:
+  ping_job:
     runs-on: ubuntu-latest
     steps:
-      - name: Visit Website
+      - name: Execute Visits
         run: |
-          # 定义你的网站地址（可以放多个）
-          URLS=("http://upic.rf.gd" "https://5399navi.liveblog365.com" "https://e-netek.freehostcn.com"
-          "http://titanplatinium.dnsup.net/index.asp")
-          
-          for url in "${URLS[@]}"; do
-            echo "正在访问: $url"
-            # 使用 curl 模拟真实浏览器访问
-            curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36" \
-                 -sL --connect-timeout 20 "$url" > /dev/null
-            echo "访问完成: $url"
+          # 将 Secrets 内容转换为数组并逐行读取
+          echo "${{ secrets.MY_URL }}" | while read -r url; do
+            # 过滤掉空行
+            if [ -z "$url" ]; then continue; fi
+            
+            echo "------------------------------------------"
+            echo "🚀 正在尝试访问: $url"
+            
+            # 使用 curl 执行高级模拟访问
+            # -s: 静默模式  -L: 跟随重定向  -k: 忽略证书错误 (最稳)
+            # --retry: 失败重试3次  --connect-timeout: 超时控制
+            # -A: 模拟最新 Chrome 浏览器指纹
+            RESPONSE=$(curl -skL --retry 3 --retry-delay 10 --connect-timeout 30 \
+                 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+                 -w "%{http_code}" \
+                 "$url" -o /dev/null)
+            
+            echo "✅ 访问结束 | 状态码: $RESPONSE | 目标: $url"
           done
+          echo "------------------------------------------"
+          echo "🎉 所有保活任务已完成！"
