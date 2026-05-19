@@ -17,19 +17,30 @@ jobs:
             # 过滤掉空行
             if [ -z "$url" ]; then continue; fi
             
+            # 如果你在某个网址前加了 # 号注释，也可以自动跳过
+            if [[ "$url" == \#* ]]; then continue; fi
+            
             echo "------------------------------------------"
             echo "🚀 正在尝试访问: $url"
             
-            # 使用 curl 执行高级模拟访问
-            # -s: 静默模式  -L: 跟随重定向  -k: 忽略证书错误 (最稳)
-            # --retry: 失败重试3次  --connect-timeout: 超时控制
-            # -A: 模拟最新 Chrome 浏览器指纹
-            RESPONSE=$(curl -skL --retry 3 --retry-delay 10 --connect-timeout 30 \
+            # 【优化重点】：
+            # 1. 移除 --retry 3，防止失效网站原地反复重试浪费时间
+            # 2. 将 --connect-timeout 降为 5 秒，快速响应
+            # 3. 增加 -m 10 (最大总耗时10秒)，防止页面太大传输数据时卡死
+            RESPONSE=$(curl -skL --connect-timeout 5 -m 10 \
                  -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
                  -w "%{http_code}" \
                  "$url" -o /dev/null)
             
-            echo "✅ 访问结束 | 状态码: $RESPONSE | 目标: $url"
+            # 根据状态码智能判断并输出日志
+            if [ "$RESPONSE" -eq 000 ]; then
+              echo "⚠️  跳过 | 该网站连接超时或网络不可达，已自动跳过！"
+            elif [ "$RESPONSE" -ge 400 ]; then
+              echo "❌ 异常 | 状态码: $RESPONSE | 网站可能报错，但已成功触发保活请求！"
+            else
+              echo "✅ 成功 | 状态码: $RESPONSE | 目标: $url"
+            fi
+
           done
           echo "------------------------------------------"
           echo "🎉 所有保活任务已完成！"
