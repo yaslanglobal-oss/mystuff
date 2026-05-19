@@ -12,29 +12,41 @@ jobs:
     steps:
       - name: Execute Visits
         run: |
+          # 显式允许脚本在某个命令报错时继续向下执行，不直接退出整个 Job
+          set +e
+
           # 将 Secrets 内容转换为数组并逐行读取
-          echo "${{ secrets.MY_URL }}" | while read -r url; do
+          echo "${{ secrets.MY_URL }}" | while read -r raw_url || [ -n "$raw_url" ]; do
+            
+            # 【核心修复 1】清洗数据：去除末尾的 Windows 换行符(\r)和前后空格
+            url=$(echo "$raw_url" | tr -d '\r' | xargs)
+
             # 过滤掉空行
             if [ -z "$url" ]; then continue; fi
             
-            # 如果你在某个网址前加了 # 号注释，也可以自动跳过
+            # 如果在某个网址前加了 # 号注释，自动跳过
             if [[ "$url" == \#* ]]; then continue; fi
             
             echo "------------------------------------------"
             echo "🚀 正在尝试访问: $url"
             
-            # 【优化重点】：
-            # 1. 移除 --retry 3，防止失效网站原地反复重试浪费时间
-            # 2. 将 --connect-timeout 降为 5 秒，快速响应
-            # 3. 增加 -m 10 (最大总耗时10秒)，防止页面太大传输数据时卡死
+            # 【核心修复 2】使用临时文件捕捉标准错误，防止 curl 的退出码中断整个循环
+            # 缩短超时时间，遇到无法解析的域名快速失败
             RESPONSE=$(curl -skL --connect-timeout 5 -m 10 \
                  -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
                  -w "%{http_code}" \
-                 "$url" -o /dev/null)
+                 "$url" -o /dev/null 2>/dev/null)
             
-            # 根据状态码智能判断并输出日志
-            if [ "$RESPONSE" -eq 000 ]; then
-              echo "⚠️  跳过 | 该网站连接超时或网络不可达，已自动跳过！"
+            # 捕获刚刚那条 curl 命令的真实退出状态码
+            CURL_EXIT_CODE=$?
+
+            # 根据 curl 自身的退出码或 HTTP 状态码进行智能分流
+            if [ "$CURL_EXIT_CODE" -eq 6 ]; then
+              echo "⚠️  跳过 | 错误码 6: 域名无法解析 (Host 不存在或 Secret 中含非法字符)。已自动跳过该网站！"
+            elif [ "$CURL_EXIT_CODE" -ne 0 ]; then
+              echo "⚠️  跳过 | curl 发生其他错误 (错误码: $CURL_EXIT_CODE)。已自动跳过！"
+            elif [ "$RESPONSE" -eq 000 ]; then
+              echo "⚠️  跳过 | 该网站连接超时，已自动跳过！"
             elif [ "$RESPONSE" -ge 400 ]; then
               echo "❌ 异常 | 状态码: $RESPONSE | 网站可能报错，但已成功触发保活请求！"
             else
@@ -42,5 +54,6 @@ jobs:
             fi
 
           done
+
           echo "------------------------------------------"
           echo "🎉 所有保活任务已完成！"
