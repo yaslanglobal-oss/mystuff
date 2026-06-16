@@ -22,4 +22,5 @@ jobs:
           # 将 GitHub Secrets 映射为 Python 脚本能读取的环境变量
           XSRF_TOKEN: ${{ secrets.XSRF_TOKEN }}
           X10HOSTING_SESSION: ${{ secrets.X10HOSTING_SESSION }}
+          run: ls -R
         run: python mystuff/pyrun.py # ⚠️ 记得改成你实际的 py 文件名
