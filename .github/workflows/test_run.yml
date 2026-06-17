@@ -23,7 +23,5 @@ jobs:
           XSRF_TOKEN: ${{ secrets.XSRF_TOKEN }}
           X10HOSTING_SESSION: ${{ secrets.X10HOSTING_SESSION }}
           run: ls -R
-           echo "=== 当前目录下的所有文件如下 ==="
-          ls -R
-          echo "================================"
+      
         run: python mystuff/pyrun.py # ⚠️ 记得改成你实际的 py 文件名
