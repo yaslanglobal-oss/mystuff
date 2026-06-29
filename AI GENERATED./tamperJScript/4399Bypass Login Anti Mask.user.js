@@ -9,7 +9,11 @@
 // @run-at       document-start
 // @allFrames    true
 // ==/UserScript==
-
+  // ==========================================
+    //This script is for learning and research purposes only. 
+    //Commercial use or other infringing purposes are strictly prohibited.
+    //Please delete it within 24 hours of downloading!
+    // ==========================================
 (function() {
     'use strict';
 
