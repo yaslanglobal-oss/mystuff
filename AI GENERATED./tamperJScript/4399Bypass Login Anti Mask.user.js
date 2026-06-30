@@ -9,7 +9,7 @@
 // @grant        none
 // @author      YaslanGlobal
 //This script borrows from KEJIYU's code and uses AI to clean up personal tags. 
-//Here is the source code address:https://greasyfork.org/zh-CN/scripts/569818-4399%E5%85%8D%E7%99%BB%E5%BD%95
+//Here is the source code address:https://dwz.xo.je/CxJJKM
 // ==/UserScript==
   // ==========================================
     //This script is for learning and research purposes only. 
