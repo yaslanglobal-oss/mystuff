@@ -1,13 +1,15 @@
 // ==UserScript==
-// @name         4399 强力去实名弹窗 (底层对抗版)
+// @name         4399 BypassLogin
 // @namespace    http://tampermonkey.net/
-// @version      0.6
-// @description  利用原生 CSS 注入和属性锁死，定点清除 #Anti_mask 和 #Anti_open，永久释放右键
-// @author       YaslanGlobal-OSS
+// @version      1.0.3
+// @description  强制释放Unity画布点击、移除左上角干扰框，并保持广告净化。
 // @match        *://*.4399.com/*
-// @grant        none
+// @match        *://*.4399.cn/*
 // @run-at       document-start
-// @allFrames    true
+// @grant        none
+// @author      YaslanGlobal
+//This script borrows from KEJIYU's code and uses AI to clean up personal tags. 
+//Here is the source code address:https://greasyfork.org/zh-CN/scripts/569818-4399%E5%85%8D%E7%99%BB%E5%BD%95
 // ==/UserScript==
   // ==========================================
     //This script is for learning and research purposes only. 
@@ -17,78 +19,139 @@
 (function() {
     'use strict';
 
-    // =========================================================
-    // 1. 降维打击：通过原生 CSS 注入直接抹杀元素（效仿 AdGuard 机制）
-    // =========================================================
-    // 这种方法不依赖 JS 的执行。哪怕网页在后面触发了 debugger 挂起了主线程，
-    // 浏览器在渲染层也会直接无视这两个元素，且网站脚本无法通过 JS 覆盖此样式。
+    // 1. CSS 降维打击（针对视觉元素）
     const style = document.createElement('style');
     style.textContent = `
-        #Anti_mask, #Anti_open {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            width: 0 !important;
-            height: 0 !important;
-        }
-        body, html {
-            overflow: auto !important;
-            pointer-events: auto !important;
-        }
-    `;
-    // 抢在 head 出来前插入到 root，确保最早生效
+/* --------------------------------------------------------- */
+/* A. 广告、弹窗与干扰元素屏蔽（恢复之前净化的广告去除功能） */
+/* --------------------------------------------------------- */
+[class*="login"], [class*="Anti"], [class*="mask"],
+#loginWrap, #realNameWrap, .login-dialog,
+.ant-modal-mask, .ant-modal-content,
+[id*="pusher"], [class*="guide"],
+div[style*="position: fixed"][style*="z-index"][style*="background-color: rgba(0, 0, 0"],
+#loginBg, .cmMask, #Anti_mask, #Anti_open,
+.fcmdialog, #Anticlose, #btn_login, #Anti_title, #Anti_content, #Anti_tips_show,
+[class*="ad"], [class*="banner"], [class*="float"],
+[id*="ad"], [id*="banner"], [id*="float"],
+.gg_box, .game_gg, .pop_gg, #gg_div, #countdown360p,
+a.tdc, img[src*="4399_16561781227.gif"], img[src*="4399_15462930261.png"],
+.s-box, .reco, .reco_r, .link_w, a.skin-l, a.skin-r,
+a.skinlk-l, a.skinlk-r, .sides, #__top_ico, #func,
+/* 兼容 Unity WebGL 框架加载状态下常见的无选择器广告/Logo */
+#loading-logo, #loading-spinner, #loading_box, .load-logo {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* --------------------------------------------------------- */
+/* B. 核心修复：针对左上角干扰框与画面不可点击 */
+/* --------------------------------------------------------- */
+/* 强制让网页所有区域及 Unity 画布能够接收鼠标点击 */
+html, body, canvas, #unity-container, #unity-canvas, .game-wrap {
+    pointer-events: auto !important;
+    touch-action: auto !important;
+    cursor: default !important;
+}
+
+/* 如果 Unity 画布由于鉴权白屏导致无法交互，强制重置其透明度与可见性 */
+canvas[style*="opacity: 0"], #unity-canvas[style*="opacity: 0"], .unity-game-canvas[style*="opacity: 0"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* 解除页面滚动与点击锁定 */
+html, body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* 精准锁定 Unity 加载进度条上的 Logo 元素，如果其包含 Logo 图像则强制隐藏 */
+.loading-logo-image, img.unity-logo, img#loading-logo {
+    display: none !important;
+}
+
+/* --------------------------------------------------------- */
+/* C. 精简导航 UI (保留 GreasyFork 优秀部分) */
+/* --------------------------------------------------------- */
+div.top {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-bottom: 5px !important;
+}
+`;
     (document.head || document.documentElement).appendChild(style);
 
-
     // =========================================================
-    // 2. 强力锁死右键：防御网站脚本后期的覆盖
+    // 2. 核心突破：Proxy 代理 window.FT 对象以通过鉴权白屏
     // =========================================================
-    // 劫持 document 和 window 的 oncontextmenu 属性，使其永远为 null，
-    // 并且用 defineProperty 锁死，让 4399 后续的脚本无法对其重新赋值。
-    const lockProperty = (obj, prop) => {
-        try {
-            Object.defineProperty(obj, prop, {
-                get: () => null,
-                set: () => { /* 拒绝网站脚本的赋值修改 */ },
-                configurable: false
-            });
-        } catch(e) {}
-    };
+    // Unity 游戏脚本由于没有登录状态而卡死，通过伪造 FT 对象函数通过检测
+    let realFT = window.FT || {};
 
-    lockProperty(document, 'oncontextmenu');
-    lockProperty(window, 'oncontextmenu');
-    lockProperty(document, 'onselectstart');
-
-
-    // =========================================================
-    // 3. 拦截网站的 addEventListener 限制
-    // =========================================================
-    // 很多网站通过 addEventListener('contextmenu', ...) 来阻止右键。
-    // 我们直接重写这个底层方法，只要发现网站试图监听右键或复制，直接拦截丢弃。
-    const originalAddEventListener = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function(type, listener, options) {
-        const banEvents = ['contextmenu', 'selectstart', 'copy', 'keydown', 'keypress', 'keyup'];
-        if (banEvents.includes(type)) {
-            // 拒绝绑定这些限制性事件
-            return;
+    const ftHandler = {
+        get: function(target, prop, receiver) {
+            // 定义需要伪造的函数，全部返回 true/已验证成年人状态
+            const fakeTrueFuncs = ['isLogin', 'checkLogin', 'checkRealName', 'isRealName', 'showRealName', 'showLogin'];
+            
+            if (fakeTrueFuncs.includes(prop)) {
+                return function(...args) {
+                    console.log(`[整合脚本拦截] 成功伪造 FT.${prop} -> 允许放行`);
+                    if (prop === 'getRealName') return { status: 1, age: 25 };
+                    return true;
+                };
+            }
+            return Reflect.get(target, prop, receiver);
+        },
+        set: function(target, prop, value, receiver) {
+            return Reflect.set(target, prop, value, receiver);
         }
-        return originalAddEventListener.call(this, type, listener, options);
     };
 
+    Object.defineProperty(window, 'FT', {
+        get: () => new Proxy(realFT, ftHandler),
+        set: (v) => { realFT = v; },
+        configurable: true
+    });
+
+    // 伪造全局常规登录状态变量
+    window.my_username = "Guest_Player";
+    window.is_login = 1;
+    window.is_realname = 1;
 
     // =========================================================
-    // 4. 定时补漏：物理移除（防止某些极端脚本用 Canvas 模拟）
+    // 3. 高频轮询清理：物理移除遮罩、左上角框与确保画布点击
     // =========================================================
-    const forceKill = () => {
-        ['#Anti_mask', '#Anti_open'].forEach(selector => {
-            const el = document.querySelector(selector);
-            if (el) el.remove();
-        });
-    };
-    
-    // 每 50 毫秒疯狂扫描，持续 10 秒
-    const timer = setInterval(forceKill, 50);
-    setTimeout(() => clearInterval(timer), 10000);
+    setInterval(() => {
+        // A. 精准移除干扰元素（包括你在网上找到的选择器与我新增的 Unity Logo）
+        const targets = document.querySelectorAll(
+            '[class*="mask"], [class*="overlay"], ' +
+            '.cmMask, #Anti_mask, #Anti_open, #layer_login, ' +
+            '.fcmdialog, #loginBg, #Anticlose, #btn_login, ' +
+            '[class*="ad"], [class*="banner"], [class*="float"], ' +
+            '#loading-logo, img#loading-logo, #loading_box, #__top_ico'
+        );
+        targets.forEach(el => el.remove());
+
+        // B. 定时确保滚动条恢复
+        if (document.body) document.body.style.overflow = 'auto';
+        if (document.documentElement) document.documentElement.style.overflow = 'auto';
+
+        // C. 强力释放游戏画布点击、重置透明度
+        // 游戏画面不能点击，通常是有不可见层覆盖或 CSS pointer-events 被禁用
+        const unityCanvas = document.querySelector('canvas#unity-canvas, #unity-container canvas, .unity-game-canvas');
+        if (unityCanvas) {
+            unityCanvas.style.pointerEvents = 'auto';
+            unityCanvas.style.zIndex = '999999'; // 确保在最上层
+            unityCanvas.style.opacity = '1';
+            unityCanvas.style.visibility = 'visible';
+            unityCanvas.style.display = 'block';
+        }
+    }, 100);
 
 })();
