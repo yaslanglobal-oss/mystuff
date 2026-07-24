@@ -34,4 +34,5 @@ jobs:
         MY_PASS: ${{ secrets.MY_PASS }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python send_nmap.py
+      # 🎯 关键修改：加入 ${{ github.workspace }}/ 确保绝对指向仓库根目录
+      run: python ${{ github.workspace }}/send_nmap.py
