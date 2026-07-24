@@ -1,0 +1,37 @@
+name: Auto Full Port Query (Private)
+
+# 触发条件
+on:
+  workflow_dispatch: # 允许你随时在 GitHub 页面上点击按钮手动触发测试
+  schedule:
+    - cron: '0 0 */7 * *' # 每 7 天自动运行一次 (UTC 时间 0:00，约北京时间 16:00 左右触发)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 检出仓库代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 安装 Python 环境
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    # 3. 安装依赖库
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    # 4. 安全地读取 Secrets 并执行 Python 脚本
+    - name: Run crawler script
+      env:
+        MY_USER: ${{ secrets.MY_USER }}
+        MY_PASS: ${{ secrets.MY_PASS }}
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      run: python crawler.py
