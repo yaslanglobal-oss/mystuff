@@ -106,6 +106,7 @@ def main():
     lines = report_content.split("\n")
     for line in lines:
         if "open" in line and "/" in line:
+            # 🎯 核心修复：先用 [0] 拿到斜杠前面的端口号字符串，再对其使用 .strip()
             port_num = line.split("/")[0].strip()
             if port_num.isdigit():
                 open_ports.append(int(port_num))
@@ -128,7 +129,7 @@ def main():
     open_ports.sort()
     valid_proxies.sort()
 
-    # 3. 🎯 消息开头添加【可用代理数量统计】
+    # 3. 消息开头添加【可用代理数量统计】
     msg_header = (
         f"⏰ 【双重检测任务】扫描验证完成！\n"
         f"🌐 目标主机: {target_ip}\n"
@@ -139,9 +140,9 @@ def main():
     msg_proxy_section = "🚀 【100% 可用代理链接清单】\n"
     if valid_proxies:
         for port in valid_proxies:
-            msg_proxy_section += f"🔹 端口 {port} 可用：\n https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS} \n\n"
+            msg_proxy_section += f"🔹 端口 {port} 可用：\n` https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS} \n\n"
     else:
-        msg_proxy_section += "🚫 本次扫描的 开放 端口中，未发现符合账号密码配置的可用代理。\n\n"
+        msg_proxy_section += "🚫 本次扫描的 300+ 个端口中，未发现符合账号密码配置的可用代理。\n\n"
 
     # 📂 专区：紧凑列出服务器开放的所有端口，方便你做全量查阅
     ports_str = ", ".join([str(p) for p in open_ports])
@@ -151,7 +152,3 @@ def main():
     
     # 发送最终报告
     send_tg_message(final_msg)
-
-
-if __name__ == "__main__":
-    main()
