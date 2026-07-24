@@ -50,7 +50,7 @@ def send_tg_notification(results, is_safe_report=False):
         print("未配置 TG_BOT_TOKEN 或 TG_CHAT_ID，跳过 TG 通知。")
         return False
 
-    url = f"https://telegram.org{TG_BOT_TOKEN.strip()}/sendMessage"
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN.strip()}/sendMessage"
 
     if is_safe_report:
         # 情况 A：未发现任何有效端口，发送清爽的平安报告
