@@ -115,7 +115,7 @@ def main():
     print(f"📊 Nmap 快扫完成！检测到目标主机 {target_ip} 共有 {len(open_ports)} 个开放端口。")
     print(f"🚀 启动多线程并发验证（线程数: {CONCURRENT_WORKERS}），正在对撞测试...")
 
-    # 2. 🌟 核心改进：引入线程池并发验证，让 300 多个端口速度飙升
+    # 2. 引入线程池并发验证
     valid_proxies = []
     with ThreadPoolExecutor(max_workers=CONCURRENT_WORKERS) as executor:
         futures = [executor.submit(test_socks5_proxy, target_ip, port) for port in open_ports]
@@ -130,16 +130,20 @@ def main():
     open_ports.sort()
     valid_proxies.sort()
 
-    # 3. 🌟 重新设计排版：将可用端口和原始端口完美剥离输出
-    msg_header = f"⏰ 【双重检测任务】扫描验证完成！\n目标主机: {target_ip}\n\n"
+    # 3. 🎯 优化排版：在消息最开头添加直观的数量汇总统计
+    msg_header = (
+        f"⏰ 【双重检测任务】扫描验证完成！\n"
+        f"🌐 目标主机: {target_ip}\n"
+        f"📊 结果统计: 本次共筛查出 🔥【 {len(valid_proxies)} 】个可用代理（服务器全量开放端口共 {len(open_ports)} 个）\n\n"
+    )
     
     # 💎 专区：高亮单独列出能够正常使用的代理链接
     msg_proxy_section = "🚀 【100% 可用代理链接清单】\n"
     if valid_proxies:
         for port in valid_proxies:
-            msg_proxy_section += f"🔹 端口 {port} 可用：\n`https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS}\n\n"
+            msg_proxy_section += f"🔹 端口 {port} 可用：\n https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS} \n\n"
     else:
-        msg_proxy_section += "🚫 本次扫描的 300+ 个端口中，未发现符合账号密码配置的可用代理。\n\n"
+        msg_proxy_section += "🚫 本次扫描的  {len(open_ports)} 个端口中，未发现符合账号密码配置的可用代理。\n\n"
 
     # 📂 专区：紧凑列出服务器开放的所有端口，方便你做全量查阅
     ports_str = ", ".join([str(p) for p in open_ports])
