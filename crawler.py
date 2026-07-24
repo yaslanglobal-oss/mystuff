@@ -18,7 +18,6 @@ TG_CHAT_ID = os.getenv("TG_CHAT_ID", "")
 
 
 def check_port(port):
-    """测试单个端口"""
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Content-Type": "application/x-www-form-urlencoded",
@@ -29,18 +28,24 @@ def check_port(port):
         "user": USER,
         "pass": PASS,
     }
-
     try:
         response = requests.post(
             TARGET_URL, headers=headers, data=payload, timeout=5
         )
+
+        # 💡 核心排查：只测 1 个端口，看看 GitHub 到底能不能连上网站
+        if port == 19291:  # 或者换成你已知绝对可用的那个端口
+            print(f"【测试端口 {port}】HTTP状态码: {response.status_code}")
+            print(f"【测试端口 {port}】返回内容: {response.text[:500]}")
+
         if response.status_code == 200:
             res_json = response.json()
-            # 核心判断：当且仅当 code 为 0 时判定为真正找到了正确端口
             if res_json.get("code") == 0:
                 return port, res_json
         return port, None
-    except Exception:
+    except Exception as e:
+        if port == 80:
+            print(f"【测试端口 {port}】请求发生异常: {e}")
         return port, None
 
 
