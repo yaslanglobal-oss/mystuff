@@ -5,7 +5,7 @@ import time
 import requests
 
 # 基础配置
-TARGET_URL = "https://example.com"
+TARGET_URL = os.getenv("MY_SERVERG", "")
 MAX_WORKERS = 40  # 并发线程数
 
 # 从 GitHub Secrets 读取敏感信息
@@ -24,7 +24,7 @@ def check_port(port):
         "Content-Type": "application/x-www-form-urlencoded",
     }
     payload = {
-        "server": "12.34.56.78",
+        "server": "42.194.173.209",
         "port": str(port),
         "user": USER,
         "pass": PASS,
