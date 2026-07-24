@@ -139,9 +139,9 @@ def main():
     msg_proxy_section = "🚀 【100% 可用代理链接清单】\n"
     if valid_proxies:
         for port in valid_proxies:
-            msg_proxy_section += f"🔹 端口 {port} 可用：\n`https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS}`\n\n"
+            msg_proxy_section += f"🔹 端口 {port} 可用：\n https://t.me/socks?server={target_ip}&port={port}&user={USER}&pass={PASS} \n\n"
     else:
-        msg_proxy_section += "🚫 本次扫描的 300+ 个端口中，未发现符合账号密码配置的可用代理。\n\n"
+        msg_proxy_section += "🚫 本次扫描的 开放 端口中，未发现符合账号密码配置的可用代理。\n\n"
 
     # 📂 专区：紧凑列出服务器开放的所有端口，方便你做全量查阅
     ports_str = ", ".join([str(p) for p in open_ports])
