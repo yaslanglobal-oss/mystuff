@@ -5,25 +5,46 @@ import urllib.request
 
 
 def send_tg_message(token, chat_id, text):
-    """安全发送 Telegram 消息"""
+    """安全发送 Telegram 消息（支持长文本自动切片发送）"""
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text}
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as response:
-            return response.status == 200
-    except Exception as e:
-        print(f"❌ 发送 TG 时发生异常: {e}")
-        return False
+
+    # 🎯 核心修复：TG 单条消息限制 4096 字符。这里设置 4000 字符切片，防止爆表
+    max_length = 4000
+    message_chunks = [
+        text[i : i + max_length] for i in range(0, len(text), max_length)
+    ]
+
+    success = True
+    for index, chunk in enumerate(message_chunks, 1):
+        # 如果有多条，在信息尾部加上页码提示
+        if len(message_chunks) > 1:
+            chunk += f"\n\n(第 {index}/{len(message_chunks)} 页)"
+
+        payload = {"chat_id": chat_id, "text": chunk}
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                if response.status != 200:
+                    print(f"❌ 第 {index} 页发送失败，状态码: {response.status}")
+                    success = False
+                else:
+                    print(f"─────── Telegram 第 {index} 页发送成功！───────")
+        except Exception as e:
+            print(f"❌ 发送第 {index} 页时发生异常: {e}")
+            success = False
+
+    return success
 
 
 def main():
-    # 从命令行获取当前属于哪个阶段 (例如: stage1, stage2)
     stage = sys.argv[1] if len(sys.argv) > 1 else "stage1"
 
     token = os.getenv("TG_BOT_TOKEN", "").strip()
@@ -41,6 +62,7 @@ def main():
     lines = report_content.split("\n")
     formatted_lines = []
     for line in lines:
+        # 提取关键行：包含 open（开放端口）、Nmap done（结束统计）、scan report for（目标IP）
         if "open" in line or "Nmap done" in line or "scan report for" in line:
             formatted_lines.append(line)
 
