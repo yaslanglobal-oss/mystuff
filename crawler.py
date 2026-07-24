@@ -44,54 +44,78 @@ def check_port(port):
         return port, None
 
 
-def send_tg_notification(results):
-    """通过 Telegram Bot 发送通知（带长文本切片防护与严格变量校验）"""
-    # 🌟 增强校验：防止变量为空或未读到
-    if not TG_BOT_TOKEN or TG_BOT_TOKEN.strip() == "":
-        print("❌ 错误：未读取到有效的 TG_BOT_TOKEN，请检查 GitHub Secrets 配置！")
-        return
-    if not TG_CHAT_ID or TG_CHAT_ID.strip() == "":
-        print("❌ 错误：未读取到有效的 TG_CHAT_ID，请检查 GitHub Secrets 配置！")
-        return
+def send_tg_notification(results, is_safe_report=False):
+    """通过 Telegram Bot 发送通知（严格格式化实际数据与平安报告）"""
+    if not TG_BOT_TOKEN or not TG_CHAT_ID:
+        print("未配置 TG_BOT_TOKEN 或 TG_CHAT_ID，跳过 TG 通知。")
+        return False
 
-    # 正确拼接 URL，确保没有多余的斜杠或星号
-    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN.strip()}/sendMessage"
+    url = f"https://telegram.org{TG_BOT_TOKEN.strip()}/sendMessage"
 
-    # 构建纯文本格式的内容
-    header = f"⏰ 端口扫描完成！\n共发现 {len(results)} 个有效端口。\n\n"
-    content = ""
-    for port, data in results.items():
-        if port != "提示":
-            content += f"📍 端口 {port}:\n{json.dumps(data, ensure_ascii=False, indent=2)}\n\n"
-        else:
-            content += f"💡 {data}\n"
-
-    full_message = header + content
+    if is_safe_report:
+        # 情况 A：未发现任何有效端口，发送清爽的平安报告
+        full_message = "⏰ 定时端口扫描完成！\n\n💡 本次全量扫描（0-65535）结束，未发现任何开放或匹配的目标端口。"
+    else:
+        # 情况 B：真正找到了有效端口，进行漂亮、详细的格式化排版
+        header = f"🔥 【警报】端口扫描发现有效数据！\n累计在全量范围内发现了 {len(results)} 个有效端口。\n\n"
+        content = ""
+        for port, data in results.items():
+            content += "====================\n"
+            content += f"📍 开放端口: 【 {port} 】\n"
+            content += f"📄 详细 JSON 数据:\n{json.dumps(data, ensure_ascii=False, indent=2)}\n"
+            content += "====================\n\n"
+        full_message = header + content
 
     # TG 消息最大长度限制为 4096 字符，若超出则自动进行分段发送
     max_length = 4000
     message_chunks = [
-        full_message[i:i+max_length] 
+        full_message[i : i + max_length]
         for i in range(0, len(full_message), max_length)
     ]
 
     for chunk in message_chunks:
-        payload = {
-            "chat_id": TG_CHAT_ID.strip(),
-            "text": chunk
-        }
+        payload = {"chat_id": TG_CHAT_ID.strip(), "text": chunk}
         try:
-            # 打印实际请求的脱敏 URL 方便排查
-            print(f"正在尝试发送消息到 TG，接口地址: https://telegram.org[已隐藏].../sendMessage")
             res = requests.post(url, json=payload, timeout=10)
-            if res.status_code == 200:
-                print("─────── Telegram 消息发送成功！───────")
-            else:
-                print(f"❌ Telegram 服务器拒绝，状态码: {res.status_code}, 原因: {res.text}")
-                print("💡 提示：如果提示 chat not found，说明你还没有在 TG 里面关注并 [/start] 你的机器人！")
+            print(f"TG 实际响应状态码: {res.status_code}")
         except Exception as e:
-            print(f"❌ 发送 TG 通知时发生网络异常: {e}")
+            print(f"发送 TG 时发生网络异常: {e}")
+            return False
+    return True
 
+
+def main():
+    print(f"开始全量扫描端口 0-65535... 当前并发线程数: {MAX_WORKERS}")
+    start_time = time.time()
+    success_results = {}
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(check_port, port): port for port in range(65536)}
+
+        for count, future in enumerate(as_completed(futures), 1):
+            port, success_data = future.result()
+            if success_data:
+                print(f"🎉 发现有效端口: {port}")  # GitHub 侧只留极简日志
+                success_results[port] = success_data
+
+            if count % 5000 == 0:
+                print(
+                    f"已扫描 {count}/65536 个端口... 已耗时: {time.time() - start_time:.1f}秒"
+                )
+
+    print(f"\n扫描完成！总耗时: {time.time() - start_time:.2f} 秒。")
+
+    # 根据是否抓到真实数据，走两条完全不同的通知通道
+    if success_results:
+        # 抓到了真家伙：直接把包含端口、详细 JSON 的字典扔进去
+        send_tg_notification(success_results, is_safe_report=False)
+    else:
+        # 啥也没捞到：发送专门的报平安文案，不再统计字典数量
+        send_tg_notification(None, is_safe_report=True)
+
+
+if __name__ == "__main__":
+    main()
 
 
 def main():
