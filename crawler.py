@@ -45,12 +45,17 @@ def check_port(port):
 
 
 def send_tg_notification(results):
-    """通过 Telegram Bot 发送通知（带长文本切片防护）"""
-    if not TG_BOT_TOKEN or not TG_CHAT_ID:
-        print("未配置 TG_BOT_TOKEN 或 TG_CHAT_ID，跳过 TG 通知。")
+    """通过 Telegram Bot 发送通知（带长文本切片防护与严格变量校验）"""
+    # 🌟 增强校验：防止变量为空或未读到
+    if not TG_BOT_TOKEN or TG_BOT_TOKEN.strip() == "":
+        print("❌ 错误：未读取到有效的 TG_BOT_TOKEN，请检查 GitHub Secrets 配置！")
+        return
+    if not TG_CHAT_ID or TG_CHAT_ID.strip() == "":
+        print("❌ 错误：未读取到有效的 TG_CHAT_ID，请检查 GitHub Secrets 配置！")
         return
 
-    url = f"https://telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+    # 正确拼接 URL，确保没有多余的斜杠或星号
+    url = f"https://telegram.org{TG_BOT_TOKEN.strip()}/sendMessage"
 
     # 构建纯文本格式的内容
     header = f"⏰ 端口扫描完成！\n共发现 {len(results)} 个有效端口。\n\n"
@@ -66,20 +71,27 @@ def send_tg_notification(results):
     # TG 消息最大长度限制为 4096 字符，若超出则自动进行分段发送
     max_length = 4000
     message_chunks = [
-        full_message[i : i + max_length]
+        full_message[i:i+max_length] 
         for i in range(0, len(full_message), max_length)
     ]
 
     for chunk in message_chunks:
-        payload = {"chat_id": TG_CHAT_ID, "text": chunk}
+        payload = {
+            "chat_id": TG_CHAT_ID.strip(),
+            "text": chunk
+        }
         try:
+            # 打印实际请求的脱敏 URL 方便排查
+            print(f"正在尝试发送消息到 TG，接口地址: https://telegram.org[已隐藏].../sendMessage")
             res = requests.post(url, json=payload, timeout=10)
             if res.status_code == 200:
-                print("Telegram 消息发送成功！")
+                print("─────── Telegram 消息发送成功！───────")
             else:
-                print(f"Telegram 发送失败，状态码: {res.status_code}, 原因: {res.text}")
+                print(f"❌ Telegram 服务器拒绝，状态码: {res.status_code}, 原因: {res.text}")
+                print("💡 提示：如果提示 chat not found，说明你还没有在 TG 里面关注并 [/start] 你的机器人！")
         except Exception as e:
-            print(f"发送 TG 通知时发生异常: {e}")
+            print(f"❌ 发送 TG 通知时发生网络异常: {e}")
+
 
 
 def main():
