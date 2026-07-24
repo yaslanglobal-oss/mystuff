@@ -25,7 +25,7 @@ jobs:
     - name: Run Full Port Nmap Scan (0-65535)
       run: |
         echo "正在对目标主机执行全端口极速嗅探..."
-        nmap -p- -T4 --min-rate 1500 42.194.173.209 > nmap_report.txt
+        nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
 
     # 4. 📱 运行融合检测脚本，精准测试开放的端口，并发送报告到 TG
     - name: Process Report & Check SOCKS5
@@ -34,5 +34,6 @@ jobs:
         MY_PASS: ${{ secrets.MY_PASS }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       # 🎯 关键修改：加入 ${{ github.workspace }}/ 确保绝对指向仓库根目录
       run: python ${{ github.workspace }}/send_nmap.py
