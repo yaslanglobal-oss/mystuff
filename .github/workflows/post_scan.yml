@@ -1,37 +1,35 @@
-name: Auto Full Port Query (Private)
+name: Auto Server Port Scanner (Nmap)
 
-# 触发条件
 on:
-  workflow_dispatch: # 允许你随时在 GitHub 页面上点击按钮手动触发测试
+  workflow_dispatch: # 支持手动点击测试
   schedule:
-    - cron: '0 0 */7 * *' # 每 7 天自动运行一次 (UTC 时间 0:00，约北京时间 16:00 左右触发)
+    - cron: '0 0 */7 * *' # 每 7 天运行一次
 
 jobs:
-  build:
+  nmap_scan:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. 检出仓库代码
+    # 1. 检出代码
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. 安装 Python 环境
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    # 3. 安装依赖库
-    - name: Install dependencies
+    # 2. 在 GitHub 虚拟机中安装真正的 Nmap 工具
+    - name: Install Nmap Tool
       run: |
-        python -m pip install --upgrade pip
-        pip install requests
+        sudo apt-get update
+        sudo apt-get install -y nmap
 
-    # 4. 安全地读取 Secrets 并执行 Python 脚本
-    - name: Run crawler script
+    # 3. 运行 Nmap 扫描（请把下面的 12.34.56.78 换成你网页工具扫的那个真实目标 IP）
+    # -p- 代表全量扫描 0-65535 的所有端口。如果不加 -p- 默认只扫最常用的 1000 个端口。
+    - name: Run Nmap Scan
+      run: |
+        echo "正在对目标主机执行全端口扫描，请稍候..."
+        nmap -p- 42.194.173.209 > nmap_report.txt
+
+    # 4. 运行 Python 脚本把 nmap_report.txt 里面的内容私发给你的 TG
+    - name: Push Report to Telegram
       env:
-        MY_USER: ${{ secrets.MY_USER }}
-        MY_PASS: ${{ secrets.MY_PASS }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python crawler.py
+      run: python send_nmap.py
