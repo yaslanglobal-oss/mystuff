@@ -21,7 +21,7 @@ def send_tg_message(text):
     if not TG_BOT_TOKEN or not TG_CHAT_ID:
         print("❌ 未配置 TG 密钥，取消发送。")
         return False
-    url = f"https://telegram.org{TG_BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
 
     max_length = 4000
     message_chunks = [text[i:i+max_length] for i in range(0, len(text), max_length)]
