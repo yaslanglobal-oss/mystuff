@@ -1,0 +1,41 @@
+name: Auto2.0 Server Port Scanner (Nmap + Proxy Checker)
+
+on:
+  workflow_dispatch: # 支持手动点击测试
+  schedule:
+    - cron: '0 0 */7 * *' # 每 7 天自动运行一次
+
+jobs:
+  nmap_and_check:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 检出代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 安装 Nmap 工具
+    - name: Install Nmap Tool
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nmap
+
+    # 3. 🚀 暴力全量扫描（利用环境变量加密服务器 IP）
+    - name: Run Full Port Nmap Scan (0-65535)
+      env:
+        # 🎯 核心：将你在网页端设置的加密服务器 IP 提取为系统环境变量
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
+      run: |
+        echo "正在对加密目标主机执行全端口极速嗅探..."
+        # 🎯 核心：Nmap 指令直接读取刚才注入的环境变量 $MY_TARGET_IP，配置文件中不再留有任何真实 IP 痕迹
+        nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
+
+    # 4. 📱 运行融合检测脚本，精准测试开放的端口，并发送报告到 TG
+    - name: Process Report & Check SOCKS5
+      env:
+        MY_USER: ${{ secrets.MY_USER }}
+        MY_PASS: ${{ secrets.MY_PASS }}
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      # 使用绝对路径确保运行绝不报错
+      run: python ${{ github.workspace }}/send_nmap.py
