@@ -32,7 +32,7 @@ jobs:
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python send_nmap.py stage1
+      run: python send_nmap0.py stage1
 
     # 5. ⏳ 【第二阶段】深度扫描其余所有高位端口（1001 - 65535，耗时约几分钟）
     # 请把 12.34.56.78 换成你的真实目标 IP
@@ -46,4 +46,4 @@ jobs:
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python send_nmap.py stage2
+      run: python send_nmap0.py stage2
