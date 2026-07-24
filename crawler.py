@@ -6,7 +6,7 @@ import requests
 
 # 基础配置
 TARGET_URL = os.getenv("MY_SERVERG", "")
-MAX_WORKERS = 40  # 并发线程数
+MAX_WORKERS = 10  # 并发线程数
 
 # 从 GitHub Secrets 读取敏感信息
 USER = os.getenv("MY_USER", "abcd")
