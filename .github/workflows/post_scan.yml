@@ -39,7 +39,7 @@ jobs:
     - name: Run Stage 2 - Full Scan (1001-65535)
       run: |
         echo "⏳ 启动第二阶段：全量高位端口深度扫描（此步骤耗时较长，请耐心等待）..."
-        nmap -p 1001-65535 42.194.173.209 > nmap_report.txt
+        nmap -p 1001-65535 -T4 --min-rate 1000 42.194.173.209 > nmap_report.txt
 
     # 6. 📱 发送第二阶段（最终阶段）报告到 TG
     - name: Push Stage 2 Report
