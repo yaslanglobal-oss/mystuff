@@ -55,7 +55,7 @@ def send_tg_notification(results):
         return
 
     # 正确拼接 URL，确保没有多余的斜杠或星号
-    url = f"https://telegram.org/bot{TG_BOT_TOKEN.strip()}/sendMessage"
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN.strip()}/sendMessage"
 
     # 构建纯文本格式的内容
     header = f"⏰ 端口扫描完成！\n共发现 {len(results)} 个有效端口。\n\n"
