@@ -50,7 +50,7 @@ def send_tg_notification(results):
         print("未配置 TG_BOT_TOKEN 或 TG_CHAT_ID，跳过 TG 通知。")
         return
 
-    url = f"https://telegram.org{TG_BOT_TOKEN}/sendMessage"
+    url = f"https://telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
 
     # 构建纯文本格式的内容
     header = f"⏰ 端口扫描完成！\n共发现 {len(results)} 个有效端口。\n\n"
