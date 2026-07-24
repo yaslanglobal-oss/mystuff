@@ -106,7 +106,7 @@ def main():
     lines = report_content.split("\n")
     for line in lines:
         if "open" in line and "/" in line:
-            port_num = line.split("/").strip()
+            port_num = line.split("/")[0].strip()
             if port_num.isdigit():
                 open_ports.append(int(port_num))
 
