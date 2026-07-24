@@ -1,4 +1,4 @@
-name: Auto Server Port Scanner (Nmap)
+name: Auto Server Port Scanner (Nmap Fast & Full)
 
 on:
   workflow_dispatch: # 支持手动点击测试
@@ -14,22 +14,36 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. 在 GitHub 虚拟机中安装真正的 Nmap 工具
+    # 2. 安装本地 Nmap 工具
     - name: Install Nmap Tool
       run: |
         sudo apt-get update
         sudo apt-get install -y nmap
 
-    # 3. 运行 Nmap 扫描（请把下面的 12.34.56.78 换成你网页工具扫的那个真实目标 IP）
-    # -p- 代表全量扫描 0-65535 的所有端口。如果不加 -p- 默认只扫最常用的 1000 个端口。
-    - name: Run Nmap Scan
+    # 3. 🛑 【第一阶段】极速扫描常用 Top 1000 端口（耗时约 10 秒左右）
+    # 请把 12.34.56.78 换成你的真实目标 IP
+    - name: Run Stage 1 - Fast Scan (Top 1000)
       run: |
-        echo "正在对目标主机执行全端口扫描，请稍候..."
-        nmap -p- 42.194.173.209 > nmap_report.txt
+        echo "🚀 启动第一阶段：常用端口快速扫描..."
+        nmap 42.194.173.209 > nmap_report.txt
 
-    # 4. 运行 Python 脚本把 nmap_report.txt 里面的内容私发给你的 TG
-    - name: Push Report to Telegram
+    # 4. 📱 立刻发送第一阶段报告到 TG（让你秒知运行状态）
+    - name: Push Stage 1 Report
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python send_nmap.py
+      run: python send_nmap.py stage1
+
+    # 5. ⏳ 【第二阶段】深度扫描其余所有高位端口（1001 - 65535，耗时约几分钟）
+    # 请把 12.34.56.78 换成你的真实目标 IP
+    - name: Run Stage 2 - Full Scan (1001-65535)
+      run: |
+        echo "⏳ 启动第二阶段：全量高位端口深度扫描（此步骤耗时较长，请耐心等待）..."
+        nmap -p 1001-65535 42.194.173.209 > nmap_report.txt
+
+    # 6. 📱 发送第二阶段（最终阶段）报告到 TG
+    - name: Push Stage 2 Report
+      env:
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      run: python send_nmap.py stage2
