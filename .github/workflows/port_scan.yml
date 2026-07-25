@@ -3,7 +3,7 @@ name: Auto2.0 Server Port Scanner (Nmap + Proxy Checker)
 on:
   workflow_dispatch: # 支持手动点击测试
   schedule:
-    - cron: '0 0 */7 * *' # 每 7 天自动运行一次
+    - cron: '0 0 */3 * *' # 每 3 天自动运行一次
 
 jobs:
   nmap_and_check:
@@ -12,7 +12,7 @@ jobs:
     steps:
     # 1. 检出代码
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # 2. 安装 Nmap 工具
     - name: Install Nmap Tool
