@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # 从 GitHub Secrets 读取敏感配置
 USER = os.getenv("MY_USER", "abcd").strip()
 PASS = os.getenv("MY_PASS", "EfGh").strip()
+# 🎯 新增保底：直接把工作流里传进来的服务器 IP 也读取进来作为保底
+FALLBACK_IP = os.getenv("MY_TARGET_IP", "").strip()
 
 # 配置并发线程数
 CONCURRENT_WORKERS = 50 
@@ -23,7 +25,7 @@ def test_socks5_proxy(server, port):
         # 1. 握手
         sock.sendall(b"\x05\x02\x00\x02")
         method_res = sock.recv(2)
-        if not method_res or method_res[1] != 0x02 and method_res[1] != 0x00:
+        if not method_res or len(method_res) < 2 or (method_res[1] != 0x02 and method_res[1] != 0x00):
             sock.close()
             return port, False, None
 
@@ -34,11 +36,11 @@ def test_socks5_proxy(server, port):
             auth_packet = b"\x01" + bytes([len(user_bytes)]) + user_bytes + bytes([len(pass_bytes)]) + pass_bytes
             sock.sendall(auth_packet)
             auth_res = sock.recv(2)
-            if not auth_res or auth_res[1] != 0x00:
+            if not auth_res or len(auth_res) < 2 or auth_res[1] != 0x00:
                 sock.close()
                 return port, False, None
 
-        # 3. 对撞测试：尝试连接 Telegram 核心服务器 IP
+        # 3. 对撞测试
         dest_ip = socket.inet_aton("149.154.167.50")
         dest_port = (443).to_bytes(2, byteorder='big')
         connect_packet = b"\x05\x01\x00\x01" + dest_ip + dest_port
@@ -46,10 +48,7 @@ def test_socks5_proxy(server, port):
         conn_res = sock.recv(10)
         sock.close()
         
-        # 真正可用的代理通道
-        is_valid = conn_res and conn_res[1] == 0x00
-        
-        # 如果可用，顺便生成快捷订阅链接
+        is_valid = conn_res and len(conn_res) >= 2 and conn_res[1] == 0x00
         tg_link = f"https://t.me{server}&port={port}&user={USER}&pass={PASS}" if is_valid else None
         return port, is_valid, tg_link
     except Exception:
@@ -59,17 +58,31 @@ def test_socks5_proxy(server, port):
 def main():
     scan_result_file = "nmap_report.txt"
     if not os.path.exists(scan_result_file):
-        print("❌ 未找到 Nmap 扫描报告文件。")
+        print("❌ 错误：未找到 Nmap 扫描报告文件。")
         sys.exit(1)
 
     with open(scan_result_file, "r", encoding="utf-8") as f:
         report_content = f.read()
 
+    # 💡 Debug 强力打印：在日志里先印出 Nmap 报告的前 300 个字符，看看到底扫成功了没
+    print("--- 🔍 Nmap 报告前瞻（Debug） ---")
+    print(report_content[:300])
+    print("---------------------------------")
+
+    # 尝试解析 IP
     ip_match = re.search(r"scan report for ([\d\.]+)", report_content)
-    if not ip_match:
-        print("❌ 无法从报告中解析出目标 IP")
-        sys.exit(1)
-    target_ip = ip_match.group(1)
+    
+    if ip_match:
+        target_ip = ip_match.group(1)
+        print(f"✅ 成功从 Nmap 报告中解析到目标 IP: {target_ip}")
+    else:
+        # 🎯 核心改变：如果 Nmap 文本里没捞到，直接用环境变量传入的保底 IP，不再强制崩溃中断！
+        if FALLBACK_IP:
+            target_ip = FALLBACK_IP
+            print(f"⚠️ Nmap 报告中未发现标准 IP 格式，已激活 Secrets 备用保底 IP: {target_ip}")
+        else:
+            print("❌ 错误：无法从报告中解析出目标 IP，且环境变量中的保底 IP 均为空！")
+            sys.exit(1)
 
     # 提取所有开放端口
     open_ports = []
@@ -80,14 +93,12 @@ def main():
             if port_num.isdigit():
                 open_ports.append(int(port_num))
 
-    print(f"📊 Nmap 扫描完成！开放端口共 {len(open_ports)} 个。开始并发测试可用性...")
+    print(f"📊 提取完成，开始并发测试 {len(open_ports)} 个开放端口的可用性...")
 
-    # 多线程并发验证
     valid_proxies = []
     proxy_links = []
     with ThreadPoolExecutor(max_workers=CONCURRENT_WORKERS) as executor:
         futures = [executor.submit(test_socks5_proxy, target_ip, port) for port in open_ports]
-        
         for future in as_completed(futures):
             port, is_ok, tg_link = future.result()
             if is_ok:
@@ -98,7 +109,6 @@ def main():
     valid_proxies.sort()
     proxy_links.sort()
 
-    # 🎯 核心改变：不再打包发给 TG，而是组装成结构规范的 JSON 结果字典
     final_report = {
         "scan_time": os.popen("date '+%Y-%m-%d %H:%M:%S'").read().strip(),
         "target_host": target_ip,
@@ -108,12 +118,11 @@ def main():
         "all_open_ports_list": open_ports
     }
 
-    # 将结果写入本地 report.json 文件中，等待工作流将其搬运走
     output_filename = "report.json"
     with open(output_filename, "w", encoding="utf-8") as json_file:
         json.dump(final_report, json_file, ensure_ascii=False, indent=4)
         
-    print(f"🏁 扫描并验证完成！数据成功写入本地 {output_filename} 文件。")
+    print(f"🏁 扫描并验证完成！数据成功写入本地 {output_filename}")
 
 
 if __name__ == "__main__":
