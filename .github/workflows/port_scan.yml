@@ -46,7 +46,7 @@ jobs:
         # 👤 填入你的 GitHub 真实用户名
         destination-github-username: 'yaslanglobal-oss'
         # 🔒 填入你刚才建立的【私密仓库】的名称
-        destination-repository-name: 'my-pr0xy'
+        destination-repository-name: 'mypr0xy'
         user-email: 'github-actions[bot]@://github.com'
         target-branch: 'main'
         commit-message: '自动同步：定时全端口审查报告更新'
