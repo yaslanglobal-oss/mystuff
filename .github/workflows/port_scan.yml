@@ -1,0 +1,47 @@
+name: WebSecure Port Scanner (Push to Web Server)
+
+on:
+  workflow_dispatch: # 支持手动点击测试
+  schedule:
+    - cron: '0 0 */7 * *' # 每 7 天自动运行一次
+
+jobs:
+  secure_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 检出仓库代码
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    # 2. 安装 Nmap 工具
+    - name: Install Nmap Tool
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nmap
+
+    # 3. 极速全端口嗅探
+    - name: Run Full Port Nmap Scan (0-65535)
+      env:
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
+      run: |
+        nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
+
+    # 4. 运行解析验证脚本，产出 report.json
+    - name: Process & Generate JSON Report
+      env:
+        MY_USER: ${{ secrets.MY_USER }}
+        MY_PASS: ${{ secrets.MY_PASS }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
+      run: python ${{ github.workspace }}/send_nmap.py
+
+    # 5. 🎯 终极简单解法：让 GitHub 扮演客户端，直接把结果一键投递给你的网页
+    - name: Send JSON Report via Webhook
+      run: |
+        echo "正在一键向远程网站服务器传输同步账单..."
+        
+        # 💡 核心修改：请把这里的 http://你的域名/search.php 换成你网页的真实公开 URL 路径！
+        # 尾部的 key= 后面必须和你在 PHP 头部定义的 SECRET_KEY 暗号一模一样
+        curl -X POST -H "Content-Type: application/json" -d @report.json "https://yzzyw.xo.je/get.php?key=my_secure_key123"
+        
+        echo "🎉 投递指令已下发！数据已与本地服务器完美熔断同步！"
