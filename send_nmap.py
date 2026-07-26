@@ -49,7 +49,7 @@ def test_socks5_proxy(server, port):
         sock.close()
         
         is_valid = conn_res and len(conn_res) >= 2 and conn_res[1] == 0x00
-        tg_link = f"https://t.me{server}&port={port}&user={USER}&pass={PASS}" if is_valid else None
+        tg_link = f"https://t.me/socks?server={server}&port={port}&user={USER}&pass={PASS}" if is_valid else None
         return port, is_valid, tg_link
     except Exception:
         return port, False, None
