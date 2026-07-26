@@ -23,7 +23,7 @@ jobs:
     # 3. 极速全端口嗅探
     - name: Run Full Port Nmap Scan (0-65535)
       env:
-        MY_TARGET_IP: ${{ secrets.MY_SERVER }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: |
         nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
 
@@ -32,14 +32,14 @@ jobs:
       env:
         MY_USER: ${{ secrets.MY_USER }}
         MY_PASS: ${{ secrets.MY_PASS }}
-        MY_TARGET_IP: ${{ secrets.MY_SERVER }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: python ${{ github.workspace }}/send_nmap.py
 
     # 5. 🎯 终极原生防线：不依赖任何第三方组件，直接用纯 Git 命令跨仓库安全提交
     - name: Push Report to Private Repo (Pure Git)
       env:
         # 安全读取你设置好的私人钥匙
-        SECRET_PAT: ${{ secrets.MY_PAT }}
+        SECRET_PAT: ${{ secrets.MY_SECPAT }}
       run: |
         # 配置虚拟虚拟环境的提交者身份
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
