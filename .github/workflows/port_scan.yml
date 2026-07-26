@@ -32,7 +32,7 @@ jobs:
       env:
         MY_USER: ${{ secrets.MY_USER }}
         MY_PASS: ${{ secrets.MY_PASS }}
-          MY_TARGET_IP: ${{ secrets.MY_TARGET_IP }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: python ${{ github.workspace }}/send_nmap.py
 
     # 5. 将生成的 report.json 跨仓库安全投递到你的【私密仓库】中
