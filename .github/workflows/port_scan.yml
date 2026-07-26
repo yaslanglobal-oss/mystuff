@@ -1,4 +1,4 @@
-name: WebSecure Port Scanner (Push to Private Repo)
+name: Secure Port Scanner (Push to Private Repo)
 
 on:
   workflow_dispatch: # 支持手动点击测试
@@ -23,7 +23,7 @@ jobs:
     # 3. 极速全端口嗅探
     - name: Run Full Port Nmap Scan (0-65535)
       env:
-        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVER }}
       run: |
         nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
 
@@ -32,22 +32,38 @@ jobs:
       env:
         MY_USER: ${{ secrets.MY_USER }}
         MY_PASS: ${{ secrets.MY_PASS }}
-        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVER }}
       run: python ${{ github.workspace }}/send_nmap.py
 
-    # 5. 将生成的 report.json 跨仓库安全投递到你的【私密仓库】中
-    - name: Pushing report to Private Repository
-      uses: cpina/github-action-push-to-another-repository@main
+    # 5. 🎯 终极原生防线：不依赖任何第三方组件，直接用纯 Git 命令跨仓库安全提交
+    - name: Push Report to Private Repo (Pure Git)
       env:
-        # 🎯 核心修复：这里改成你在第一步里刚刚设置好的新名字 MY_PAT
-        API_TOKEN_GITHUB: ${{ secrets.MY_SECPAT }}
-      with:
-        source-directory: '.'
-        file-name: 'report.json'
-        # 👤 填入你的 GitHub 真实用户名
-        destination-github-username: 'yaslanglobal-oss'
-        # 🔒 填入你刚才建立的【私密仓库】的名称
-        destination-repository-name: 'mypr0xy'
-        user-email: 'github-actions[bot]@://github.com'
-        target-branch: 'main'
-        commit-message: '自动同步：定时全端口审查报告更新'
+        # 安全读取你设置好的私人钥匙
+        SECRET_PAT: ${{ secrets.MY_PAT }}
+      run: |
+        # 配置虚拟虚拟环境的提交者身份
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        
+        # 1. 在虚拟机创建一个独立的临时缓存文件夹，用来拉取私密仓库
+        mkdir -p /tmp/sync_repo
+        
+        # 2. 核心：使用隐藏 Token 鉴权的绝对私密链接克隆你的 mypr0xy 仓库
+        # 💡 这里的 yaslanglobal-oss 和 mypr0xy 已经根据你的真实日志配置锁死
+        git clone https://${SECRET_PAT}@://github.com /tmp/sync_repo
+        
+        # 3. 将刚才第四步完美生成的结果文件拷贝进该私密仓库中
+        cp report.json /tmp/sync_repo/
+        
+        # 4. 切换进私密仓库文件夹执行标准的本地提交
+        cd /tmp/sync_repo
+        git add report.json
+        
+        # 5. 检查文件是否有实质性内容更新，如果有变化则直接进行安全推流
+        if git diff-index --quiet HEAD --; then
+          echo "📊 本次扫描结果与上周完全一致，无需重复提交数据。"
+        else
+          git commit -m "自动同步：定时全端口审查报告更新 (${{ github.run_number }})"
+          git push origin main
+          echo "🎉 恭喜！最新的 report.json 数据已成功送入你的私密保险箱！"
+        fi
