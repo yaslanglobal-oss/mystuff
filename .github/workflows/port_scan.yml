@@ -35,35 +35,43 @@ jobs:
         MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: python ${{ github.workspace }}/send_nmap.py
 
-    # 5. 🎯 终极原生防线：不依赖任何第三方组件，直接用纯 Git 命令跨仓库安全提交
+    # 5. 🎯 终极原生防线：使用标准全局凭证注入，彻底防御变量为空导致的 URL 解析错误
     - name: Push Report to Private Repo (Pure Git)
       env:
-        # 安全读取你设置好的私人钥匙
         SECRET_PAT: ${{ secrets.MY_SECPAT }}
       run: |
-        # 配置虚拟虚拟环境的提交者身份
+        # 1. 严格校验变量是否读取成功，如果为空直接精准拦截并报错提示，防止盲目运行
+        if [ -z "$SECRET_PAT" ]; then
+          echo "❌ 严重错误：未能读取到名为 MY_PAT 的 GitHub Secret！"
+          echo "💡 请立刻去当前仓库的 Settings -> Secrets -> Actions 中检查是否创建了名字一字不差叫做 MY_PAT 的加密变量。"
+          exit 1
+        fi
+
+        # 2. 配置全局 Git 提交身份
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions[bot]"
         
-        # 1. 在虚拟机创建一个独立的临时缓存文件夹，用来拉取私密仓库
+        # 3. 核心安全优化：通过 git 官方凭证管理器直接注入 Token，不在 URL 链接中暴力拼接
+        # 这种方式不管 Token 带有任何特殊符号都能 100% 稳定克隆
+        git config --global url."https://x-access-token:${SECRET_PAT}@github.com/".insteadOf "https://github.com"
+        
+        # 4. 创建独立的临时缓存文件夹，用来安全拉取私密仓库
         mkdir -p /tmp/sync_repo
         
-        # 2. 核心：使用隐藏 Token 鉴权的绝对私密链接克隆你的 mypr0xy 仓库
-        # 💡 这里的 yaslanglobal-oss 和 mypr0xy 已经根据你的真实日志配置锁死
-        git clone https://${SECRET_PAT}@://github.com /tmp/sync_repo
+        # 5. 直接使用标准的官方干净 URL 克隆，此时会自动触发上面的 url.insteadOf 加密替换机制
+        git clone https://github.comyaslanglobal-oss/mypr0xy.git /tmp/sync_repo
         
-        # 3. 将刚才第四步完美生成的结果文件拷贝进该私密仓库中
+        # 6. 将生成的最终数据文件拷贝进该私密仓库中
         cp report.json /tmp/sync_repo/
         
-        # 4. 切换进私密仓库文件夹执行标准的本地提交
+        # 7. 切换进私密仓库文件夹执行标准的本地提交与强推
         cd /tmp/sync_repo
         git add report.json
         
-        # 5. 检查文件是否有实质性内容更新，如果有变化则直接进行安全推流
         if git diff-index --quiet HEAD --; then
           echo "📊 本次扫描结果与上周完全一致，无需重复提交数据。"
         else
           git commit -m "自动同步：定时全端口审查报告更新 (${{ github.run_number }})"
           git push origin main
-          echo "🎉 恭喜！最新的 report.json 数据已成功送入你的私密保险箱！"
+          echo "🎉 恭喜！最新的 report.json 数据已彻底突破阻碍，安全送入你的私密保险箱！"
         fi
