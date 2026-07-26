@@ -1,4 +1,4 @@
-name: WebSecure Port Scanner (Push to Web Server)
+name: Secure Port Scanner (Push to Web Server)
 
 on:
   workflow_dispatch: # 支持手动点击测试
@@ -35,13 +35,13 @@ jobs:
         MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: python ${{ github.workspace }}/send_nmap.py
 
-    # 5. 🎯 终极简单解法：让 GitHub 扮演客户端，直接把结果一键投递给你的网页
+    # 5. 🎯 终极表单解法：模拟标准浏览器表单提交数据，完美穿透一切拦截与不兼容
     - name: Send JSON Report via Webhook
       run: |
         echo "正在一键向远程网站服务器传输同步账单..."
         
         # 💡 核心修改：请把这里的 http://你的域名/search.php 换成你网页的真实公开 URL 路径！
-        # 尾部的 key= 后面必须和你在 PHP 头部定义的 SECRET_KEY 暗号一模一样
-        curl -X POST -H "Content-Type: application/json" -d @report.json "https://yzzyw.xo.je/get.php?key=my_secure_key123"
+        # 使用 --data-urlencode 强制进行安全的 URL 编码表单传输，杜绝 Empty reply 52 报错
+        curl -i -X POST --data-urlencode "data@report.json" "http://yzzyw.xo.je/get.php?key=my_secure_key123"
         
         echo "🎉 投递指令已下发！数据已与本地服务器完美熔断同步！"
