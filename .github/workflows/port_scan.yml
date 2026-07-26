@@ -23,7 +23,7 @@ jobs:
     # 3. 极速全端口嗅探
     - name: Run Full Port Nmap Scan (0-65535)
       env:
-        MY_TARGET_IP: ${{ secrets.MY_SERVER }}
+        MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: |
         nmap -p- -T4 --min-rate 1500 $MY_TARGET_IP > nmap_report.txt
 
