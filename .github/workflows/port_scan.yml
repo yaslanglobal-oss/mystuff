@@ -1,4 +1,4 @@
-name: Secure Port Scanner (Push to Private Repo)
+name: WebSecure Port Scanner (Push to Private Repo)
 
 on:
   workflow_dispatch: # 支持手动点击测试
