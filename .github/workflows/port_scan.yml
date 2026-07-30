@@ -3,7 +3,7 @@ name: Secure Port Scanner (Push to Private Repo)
 on:
   workflow_dispatch: # 支持手动点击测试
   schedule:
-    - cron: '0 0 */3 * *' # 每 3 天自动运行一次
+    - cron: '5 5 */2 * *' # 每 3 天自动运行一次
 
 jobs:
   secure_scan:
