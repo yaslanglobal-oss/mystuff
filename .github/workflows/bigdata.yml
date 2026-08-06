@@ -3,7 +3,7 @@ name: B-Secure Port Scanner (Push to Private Repo)
 on:
   workflow_dispatch: # 支持手动点击测试
   schedule:
-    - cron: '5 5 */3 * *' # 每 3 天自动运行一次
+    - cron: '5 5 */15 * *' # 每 3 天自动运行一次
 
 jobs:
   secure_scan:
@@ -30,8 +30,8 @@ jobs:
     # 4. 运行解析验证脚本，产出 report.json
     - name: Process & Generate JSON Report
       env:
-        MY_USER2: ${{ secrets.MY_USER }}
-        MY_PASS2: ${{ secrets.MY_PASS }}
+        MY_USER: ${{ secrets.MY_USER2 }}
+        MY_PASS: ${{ secrets.MY_PASS2 }}
         MY_TARGET_IP: ${{ secrets.MY_SERVERG }}
       run: python ${{ github.workspace }}/send_nmap.py
 
@@ -59,19 +59,19 @@ jobs:
         mkdir -p /tmp/sync_repo
         
         # 5. 直接使用标准的官方干净 URL 克隆，此时会自动触发上面的 url.insteadOf 加密替换机制
-        git clone https://github.comyaslanglobal-oss/mypr0xy.git /tmp/sync_repo
+        git clone https://github.comyaslanglobal-oss/mypr0xy2.git /tmp/sync_repo
         
         # 6. 将生成的最终数据文件拷贝进该私密仓库中
-        cp report_big.json /tmp/sync_repo/
+        cp report.json /tmp/sync_repo/
         
         # 7. 切换进私密仓库文件夹执行标准的本地提交与强推
         cd /tmp/sync_repo
-        git add report_big.json
+        git add report.json
         
         if git diff-index --quiet HEAD --; then
           echo "📊 本次扫描结果与上周完全一致，无需重复提交数据。"
         else
           git commit -m "自动同步：定时全端口审查报告更新 (${{ github.run_number }})"
           git push origin main
-          echo "🎉 恭喜！最新的 report_big.json 数据已彻底突破阻碍，安全送入你的私密保险箱！"
+          echo "🎉 恭喜！最新的 report.json 数据已彻底突破阻碍，安全送入你的私密保险箱！"
         fi
