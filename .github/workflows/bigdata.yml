@@ -62,7 +62,7 @@ jobs:
         git clone https://github.comyaslanglobal-oss/mypr0xy.git /tmp/sync_repo
         
         # 6. 将生成的最终数据文件拷贝进该私密仓库中
-        cp report.json /tmp/sync_repo/
+        cp report_big.json /tmp/sync_repo/
         
         # 7. 切换进私密仓库文件夹执行标准的本地提交与强推
         cd /tmp/sync_repo
